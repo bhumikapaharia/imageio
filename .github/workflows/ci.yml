@@ -17,53 +17,14 @@ on:
 
 
 jobs:
-  style:
-    name: "Linting"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: psf/black@20.8b1
-        with:
-          args: ". --check"
-      - name: Install Dependencies
-        shell: bash
-        run: |
-            pip install .[linting]
-      - name: Flake8
-        uses: liskin/gh-problem-matcher-wrap@v1
-        with:
-          linters: flake8
-          run: flake8 .
-
-  no-internet:
-    name: "No-Internet Install"
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-      - name: Install Dependenceis
-        run: |
-            # Build to force downloading images (but this step needs numpy and pillow)
-            pip install -q -U numpy pillow
-            python setup.py sdist
-            pip install .[test,ffmpeg]
-            # Delete the local copy, so we're actually using the installed version
-            rm -rf ./imageio ./build ./egg-info
-      - name: Unit tests
-        run: |
-            invoke test --installed
-
-  cpython:
+  cpython_x86:
     name: "${{ matrix.os }} / CPython ${{ matrix.pyversion }}"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        pyversion: ["3.6", "3.7", "3.8", "3.9"]
+        os: ["ubuntu-latest"]
+        pyversion: ["3.8"]
         include:
           - name: Linux py37 full
             os: ubuntu-latest
@@ -94,29 +55,25 @@ jobs:
           curl -s https://codecov.io/bash | bash
         shell: bash
 
-  pypy:
-    name: "${{ matrix.os }} / ${{ matrix.pyversion }}"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os: ["ubuntu-latest", "macos-latest"]
-        pyversion: ["pypy-3.6", "pypy-3.7"]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up pypy
-        uses: actions/setup-python@v2
-        with:
-          python-version: "pypy3"
-      - name: MacOS Numpy Fix
-        if: runner.os == 'macOS'
-        run: |
-            brew install openblas
-            OPENBLAS="$(brew --prefix openblas)" pypy3 -m pip install numpy
-      - name: Install dependencies
-        shell: bash
-        run: |
-            pypy3 -m pip install .[test,ffmpeg]
-      - name: Run Unit tests
-        run: |
-            invoke test --unit
+
+  arm64_job:
+      name: Build and Test for arm64
+      runs-on: ubuntu-20.04
+      steps:
+        - uses: actions/checkout@v2
+        - name: Set up QEMU
+          id: qemu
+          uses: docker/setup-qemu-action@v1
+        - name: Install and Run tests
+          run: |
+            docker run --rm -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+              arm64v8/ubuntu:20.04 \
+              bash -exc 'apt-get update && apt install -y python3 python3-pip make build-essential libssl-dev zlib1g-dev vim wget curl git zip unzip git-core gcc llvm libncurses5-dev libffi-dev liblzma-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev python-openssl xz-utils dos2unix coverage && \
+              ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && export DEBIAN_FRONTEND=noninteractive && apt-get install -y tzdata && dpkg-reconfigure --frontend noninteractive tzdata && \
+              python3 --version && \
+              pip3 --version && \
+              pip3 install .[test,ffmpeg] && \
+              pip3 install -q -U simpleitk astropy && \
+              coverage run -m pytest -v && \
+              curl -s https://codecov.io/bash | bash && \
+              deactivate'
