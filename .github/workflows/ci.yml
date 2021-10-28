@@ -70,7 +70,8 @@ jobs:
               pip3 --version && \
               pip3 install coverage scikit-build cmake && \
               pip3 install .[test,ffmpeg] && \
-              pip3 install -q -U simpleitk astropy && \
+              pip install SimpleITK==2.1.0 && \
+              pip3 install astropy && \
               coverage run -m pytest -v && \
               curl -s https://codecov.io/bash | bash && \
               deactivate'
