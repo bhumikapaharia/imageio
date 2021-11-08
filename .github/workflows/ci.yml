@@ -41,7 +41,7 @@ jobs:
       - name: Install optional dependencies for tests
         if: matrix.TEST_FULL == 1
         run: |
-            pip install -q -U simpleitk astropy
+            pip install -q -U SimpleITK==2.1.0 astropy
       - name: Run All Unit tests
         run: |
             coverage run -m pytest -v
@@ -70,7 +70,7 @@ jobs:
               pip3 --version && \
               pip3 install coverage scikit-build cmake && \
               pip3 install .[test,ffmpeg] && \
-              pip install SimpleITK==2.1.0 && \
+              pip3 install SimpleITK==2.1.0 && \
               pip3 install astropy && \
               coverage run -m pytest -v && \
               curl -s https://codecov.io/bash | bash && \
